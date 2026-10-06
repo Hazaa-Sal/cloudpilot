@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from . import __version__
 
 from .history import initialize_history, list_plans, record_plan
 from .metrics import MetricsMiddleware, PLANS, VIOLATIONS
@@ -20,7 +21,7 @@ async def lifespan(app):
 app = FastAPI(
     title="CloudPilot",
     description="Self-service cloud infrastructure control plane",
-    version="0.2.0",
+    version=__version__,
     lifespan=lifespan,
 )
 app.add_middleware(MetricsMiddleware)
@@ -30,7 +31,7 @@ DASHBOARD_PATH = Path(__file__).with_name("dashboard.html")
 
 @app.get("/")
 def root():
-    return {"name": "CloudPilot", "version": "0.2.0", "status": "running"}
+    return {"name": "CloudPilot", "version": __version__, "status": "running"}
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

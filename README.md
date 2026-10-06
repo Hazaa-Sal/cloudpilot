@@ -98,7 +98,10 @@ timestamp, request fields, resources, status, and complete policy result.
 
 `GET /api/v1/history?limit=25&offset=0` keeps the existing newest-first JSON array
 response. `limit` accepts 1–100; `offset` accepts non-negative integers. Records
-are not automatically pruned. The dashboard shows the eight newest plans.
+are not automatically pruned. The dashboard shows eight plans per page with
+Newer/Older navigation. Select a saved plan to reopen its full policy result or
+download it as JSON. API health is checked on load and every 30 seconds while
+the page is visible.
 
 `docker compose down` preserves data; `docker compose down -v` deletes volumes.
 For backups, stop the API before copying the volume, or use SQLite's backup API;
@@ -238,3 +241,15 @@ checkov -d infra/terraform --framework terraform
 helm lint deploy/helm/cloudpilot
 docker compose --profile monitoring config --quiet
 ```
+
+Optional browser regression check (requires Playwright CLI):
+
+```bash
+playwright-cli -s=cloudpilot open http://localhost:8000/dashboard
+playwright-cli -s=cloudpilot run-code --filename=scripts/dashboard-smoke.js
+playwright-cli -s=cloudpilot close
+```
+
+This creates one denied demo plan, then checks JSON export, keyboard selection,
+history pagination, failed requests, live health, and mobile layout. Pagination
+fixtures are mocked in the browser; they are not stored in your database.

@@ -10,7 +10,7 @@ def test_root():
     assert response.status_code == 200
     assert response.json() == {
         "name": "CloudPilot",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "status": "running",
     }
 

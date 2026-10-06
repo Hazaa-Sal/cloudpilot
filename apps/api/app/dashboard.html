@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CloudPilot Dashboard</title>
+  <meta name="description" content="Preview infrastructure plans, review policy decisions, and explore saved deployment history. No cloud resources are created." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2338bdf8'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-family='sans-serif' font-weight='bold' font-size='28' fill='%2308111f'%3ECP%3C/text%3E%3C/svg%3E" />
   <style>
     :root {
       --bg: #08111f;
@@ -37,7 +39,7 @@
     }
     .brand { display: flex; align-items: center; gap: 13px; }
     .logo {
-      width: 44px; height: 44px; display: grid; place-items: center; border-radius: 13px;
+      width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 13px;
       font-weight: 900; color: #04111f;
       background: linear-gradient(135deg, var(--cyan), var(--green));
       box-shadow: 0 12px 35px rgba(56,189,248,.18);
@@ -135,6 +137,15 @@
       color: #fecdd3; background: rgba(251,113,133,.07); border: 1px solid rgba(251,113,133,.2);
     }
     .error.visible { display: block; }
+    :focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
+    .history-row { width: 100%; color: var(--text); text-align: left; font-weight: 400; cursor: pointer; }
+    .history-row:hover { border-color: var(--cyan); }
+    .history-name, .plan-name, .small, .runtime-list strong { overflow-wrap: anywhere; min-width: 0; }
+    .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+    .ghost, .link { min-height: 44px; }
+    .plan-top > div { min-width: 0; }
+    .skip { position: absolute; top: -60px; }
+    .skip:focus { top: 8px; z-index: 1; background: var(--panel); }
     footer { text-align: center; color: var(--muted); font-size: 11px; margin-top: 20px; }
     @media (max-width: 900px) {
       .stats { grid-template-columns: 1fr 1fr; }
@@ -148,7 +159,8 @@
   </style>
 </head>
 <body>
-  <div class="shell">
+  <a class="link skip" href="#planForm">Skip to planning form</a>
+  <main class="shell">
     <div class="topbar">
       <div class="brand">
         <div class="logo">CP</div>
@@ -159,14 +171,14 @@
       </div>
       <div class="actions">
         <a class="link" href="/docs">API Docs</a>
-        <a class="link" href="/health">Health</a>
+        <a class="link" href="/metrics">Metrics</a>
       </div>
     </div>
 
     <div class="stats">
       <div class="card stat">
         <div class="label">Control Plane</div>
-        <div class="value good">● Online</div>
+        <div class="value" id="healthStatus" role="status">Checking…</div>
       </div>
       <div class="card stat">
         <div class="label">Runtime</div>
@@ -187,9 +199,10 @@
         <h2>Create deployment plan</h2>
         <p class="sub">CloudPilot validates the request, evaluates policy, scores cost risk, and produces an infrastructure plan.</p>
 
-        <form id="planForm">
+        <form id="planForm" tabindex="-1">
           <label for="name">Application name</label>
-          <input id="name" value="portfolio-api" pattern="[a-z0-9-]+" minlength="3" maxlength="50" required />
+          <input id="name" value="portfolio-api" pattern="[a-z0-9-]+" minlength="3" maxlength="50" aria-describedby="nameHelp" required />
+          <div class="small" id="nameHelp">3–50 lowercase letters, numbers, or hyphens.</div>
 
           <div class="row">
             <div>
@@ -222,7 +235,7 @@
           </div>
 
           <button class="primary" id="submitBtn" type="submit">Generate infrastructure plan</button>
-          <div class="error" id="errorBox"></div>
+          <div class="error" id="errorBox" role="alert"></div>
         </form>
       </section>
 
@@ -237,7 +250,7 @@
           </div>
         </div>
 
-        <div class="plan" id="planView">
+        <div class="plan" id="planView" tabindex="-1" aria-label="Plan and policy result">
           <div class="plan-top">
             <div>
               <div class="plan-name" id="planName">—</div>
@@ -259,9 +272,10 @@
           <div id="violations"></div>
           <div id="warnings"></div>
 
-          <div class="section-label">Planned resources</div>
+          <div class="section-label">Proposed resources</div>
           <div class="stack" id="resourceList"></div>
 
+          <button class="ghost" id="downloadPlan" type="button" style="margin-top:14px">Download plan JSON</button>
           <div class="guardrail">
             <strong>Safety guardrail:</strong> CloudPilot is in plan-only mode. No <code>terraform apply</code>,
             paid load balancer, Fargate task, NAT Gateway, or EKS cluster is created by this dashboard.
@@ -275,12 +289,17 @@
         <div class="history-head">
           <div>
             <h2>Deployment history</h2>
-            <p class="sub" style="margin:4px 0 0;">Recent plans saved to SQLite, including policy decisions. History survives restarts.</p>
+            <p class="sub" style="margin:4px 0 0;">Saved plans and policy decisions. Select a plan to view its details.</p>
           </div>
           <button class="ghost" id="refreshHistory">Refresh</button>
         </div>
-        <div class="history" id="historyList">
-          <div class="small">No plans yet.</div>
+        <div class="history" id="historyList" aria-busy="true">
+          <div class="small">Loading saved plans…</div>
+        </div>
+        <div class="pagination">
+          <button class="ghost" id="newerHistory" disabled>← Newer</button>
+          <span class="small" id="historyPage" role="status"></span>
+          <button class="ghost" id="olderHistory" disabled>Older →</button>
         </div>
       </section>
 
@@ -301,17 +320,54 @@
       </section>
     </div>
 
-    <footer>CloudPilot v0.2 · FastAPI · Policy Engine · Terraform · Kubernetes · Helm · GitHub Actions</footer>
-  </div>
+    <footer>CloudPilot v0.3 · FastAPI · Policy Engine · Terraform · Kubernetes · Helm · GitHub Actions</footer>
+  </main>
 
   <script>
     const $ = id => document.getElementById(id);
     const pretty = value => String(value).replaceAll("-", " ").replace(/\b\w/g, c => c.toUpperCase());
 
+
+    let selectedPlan = null;
+    let historyOffset = 0;
+    let historyLoading = false;
+    let hasOlder = false;
+    const pageSize = 8;
+
+    async function requestJSON(url, options = {}) {
+      let response;
+      try {
+        response = await fetch(url, { ...options, signal: AbortSignal.timeout(15000) });
+      } catch {
+        throw new Error(options.method === "POST"
+          ? "Connection interrupted. Refresh history before retrying; your plan may have been saved."
+          : "Could not reach CloudPilot. Check the connection and try again.");
+      }
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        const detail = body?.detail;
+        throw new Error(Array.isArray(detail)
+          ? detail.map(item => item.msg).join(", ")
+          : typeof detail === "string" ? detail : "CloudPilot could not complete the request. Please try again.");
+      }
+      if (body === null) throw new Error("CloudPilot returned an unexpected response. Please try again.");
+      return body;
+    }
+
+    async function loadHealth() {
+      try {
+        await requestJSON("/health");
+        $("healthStatus").textContent = "● Online";
+        $("healthStatus").className = "value good";
+      } catch {
+        $("healthStatus").textContent = "● Unreachable";
+        $("healthStatus").className = "value bad";
+      }
+    }
+
     async function loadRuntime() {
       try {
-        const response = await fetch("/api/v1/runtime");
-        const runtime = await response.json();
+        const runtime = await requestJSON("/api/v1/runtime");
         $("runtimeSummary").textContent = runtime.mode === "kubernetes" ? "Kubernetes" : "Local";
         $("runtimeSummary").className = "value " + (runtime.kubernetes_detected ? "good" : "");
         $("runtimeMode").textContent = pretty(runtime.mode);
@@ -325,35 +381,59 @@
       }
     }
 
-    async function loadHistory() {
+    async function loadHistory(offset = historyOffset) {
+      if (historyLoading) return;
+      historyLoading = true;
+      $("historyList").setAttribute("aria-busy", "true");
+      ["refreshHistory", "newerHistory", "olderHistory"].forEach(id => $(id).disabled = true);
+      $("historyPage").textContent = "Loading…";
       try {
-        const response = await fetch("/api/v1/history");
-        const history = await response.json();
+        const history = await requestJSON("/api/v1/history?limit=9&offset=" + offset);
         const target = $("historyList");
-        target.innerHTML = "";
-
+        target.replaceChildren();
+        historyOffset = offset;
+        hasOlder = history.length > pageSize;
         if (!history.length) {
-          target.innerHTML = '<div class="small">No plans yet. Generate your first deployment plan above.</div>';
-          return;
+          target.textContent = offset ? "No more saved plans. Go back to the newer page." : "No plans yet. Generate your first plan above.";
         }
-
-        history.slice(0, 8).forEach(plan => {
-          const row = document.createElement("div");
+        history.slice(0, pageSize).forEach(plan => {
+          const row = document.createElement("button");
+          row.type = "button";
           row.className = "history-row";
-          const statusClass = plan.status === "validated" ? "good" : "bad";
-          row.innerHTML = `
-            <div>
-              <div class="history-name">${plan.application}</div>
-              <div class="small">${new Date(plan.created_at).toLocaleString()}</div>
-            </div>
-            <div>${pretty(plan.environment)}</div>
-            <div class="${statusClass}">${pretty(plan.status)}</div>
-            <div>${pretty(plan.policy.cost_risk)} risk</div>
-          `;
-          target.appendChild(row);
+          const name = document.createElement("span");
+          const title = document.createElement("span");
+          title.className = "history-name";
+          title.textContent = plan.application;
+          const date = document.createElement("span");
+          date.className = "small";
+          date.style.display = "block";
+          date.textContent = new Date(plan.created_at).toLocaleString();
+          name.append(title, date);
+          row.append(name);
+          [pretty(plan.environment), plan.status === "validated" ? "Allowed" : "Denied", pretty(plan.policy.cost_risk) + " risk"].forEach((text, index) => {
+            const cell = document.createElement("span");
+            cell.textContent = text;
+            if (index === 1) cell.className = plan.policy.allowed ? "good" : "bad";
+            row.append(cell);
+          });
+          row.addEventListener("click", () => {
+            renderPlan(plan);
+            $("planView").focus();
+          });
+          target.append(row);
         });
-      } catch {
-        $("historyList").innerHTML = '<div class="small">History unavailable.</div>';
+        $("historyPage").textContent = history.length
+          ? "Plans " + (offset + 1) + "–" + (offset + Math.min(pageSize, history.length))
+          : "No saved plans on this page";
+      } catch (error) {
+        $("historyPage").textContent = "Refresh failed. Displayed plans may be out of date.";
+        if (!$("historyList").querySelector("button")) $("historyList").textContent = error.message;
+      } finally {
+        historyLoading = false;
+        $("historyList").setAttribute("aria-busy", "false");
+        $("refreshHistory").disabled = false;
+        $("newerHistory").disabled = historyOffset === 0;
+        $("olderHistory").disabled = !hasOlder;
       }
     }
 
@@ -369,8 +449,9 @@
     }
 
     function renderPlan(plan) {
+      selectedPlan = plan;
       $("planName").textContent = plan.application;
-      $("planId").textContent = "Plan " + plan.plan_id.slice(0, 8);
+      $("planId").textContent = "Plan " + plan.plan_id.slice(0, 8) + " · " + new Date(plan.created_at).toLocaleString();
       $("planProvider").textContent = plan.provider.toUpperCase();
       $("planRegion").textContent = plan.region;
       $("planEnvironment").textContent = pretty(plan.environment);
@@ -391,7 +472,12 @@
       plan.resources.forEach(resource => {
         const item = document.createElement("div");
         item.className = "item";
-        item.innerHTML = `<span>${pretty(resource)}</span><strong class="good">✓</strong>`;
+        const label = document.createElement("span");
+        label.textContent = pretty(resource);
+        const state = document.createElement("span");
+        state.className = "small";
+        state.textContent = "Proposed";
+        item.append(label, state);
         $("resourceList").appendChild(item);
       });
 
@@ -414,21 +500,14 @@
       };
 
       try {
-        const response = await fetch("/api/v1/plans", {
+        const body = await requestJSON("/api/v1/plans", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        const body = await response.json();
-
-        if (!response.ok) {
-          const detail = body.detail;
-          const message = Array.isArray(detail) ? detail.map(x => x.msg).join(", ") : (detail || "Request failed");
-          throw new Error(message);
-        }
-
         renderPlan(body);
-        await loadHistory();
+        $("planView").focus();
+        await loadHistory(0);
       } catch (error) {
         $("errorBox").textContent = error.message;
         $("errorBox").classList.add("visible");
@@ -438,7 +517,20 @@
       }
     });
 
-    $("refreshHistory").addEventListener("click", loadHistory);
+    $("refreshHistory").addEventListener("click", () => loadHistory(0));
+    $("newerHistory").addEventListener("click", () => loadHistory(Math.max(0, historyOffset - pageSize)));
+    $("olderHistory").addEventListener("click", () => loadHistory(historyOffset + pageSize));
+    $("downloadPlan").addEventListener("click", () => {
+      if (!selectedPlan) return;
+      const url = URL.createObjectURL(new Blob([JSON.stringify(selectedPlan, null, 2)], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "cloudpilot-" + selectedPlan.plan_id + ".json";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    loadHealth();
+    setInterval(() => { if (!document.hidden) loadHealth(); }, 30000);
 
     loadRuntime();
     loadHistory();
