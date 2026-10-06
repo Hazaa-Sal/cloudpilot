@@ -15,6 +15,13 @@ def test_root():
     }
 
 
+def test_dashboard():
+    response = client.get("/dashboard")
+    assert response.status_code == 200
+    assert "CloudPilot" in response.text
+    assert "Create deployment plan" in response.text
+
+
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
