@@ -1,0 +1,12 @@
+services:
+  cloudpilot-api:
+    build:
+      context: .
+    container_name: cloudpilot-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps:/cloudpilot/apps
+    environment:
+      PYTHONPATH: /cloudpilot
+    command: uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000 --reload
