@@ -1,0 +1,44 @@
+name: CloudPilot CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run API tests
+        run: python -m pytest -v apps/api/tests
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform format check
+        run: terraform -chdir=infra/terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform -chdir=infra/terraform/environments/dev init -backend=false
+
+      - name: Terraform validate
+        run: terraform -chdir=infra/terraform/environments/dev validate
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: helm lint deploy/helm/cloudpilot
