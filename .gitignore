@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.*
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
