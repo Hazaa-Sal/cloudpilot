@@ -1,0 +1,335 @@
+{
+  "uid": "cloudpilot-overview",
+  "title": "CloudPilot Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "timezone": "browser",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "cloudpilot"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "API scrape health",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"cloudpilot\"}",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Plans since API start",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(cloudpilot_plans_total) or vector(0)",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Denied plans since API start",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(cloudpilot_plans_total{decision=\"denied\"}) or vector(0)",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Policy violations since API start",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(cloudpilot_policy_violations_total) or vector(0)",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Plans per minute by environment",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (environment) (rate(cloudpilot_plans_total[5m])) * 60",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "HTTP requests per second",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route, status) (rate(cloudpilot_http_requests_total[5m]))",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "API latency p95",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(cloudpilot_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "HTTP 5xx per second",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cloudpilot_http_requests_total{status=~\"5..\"}[5m])) or vector(0)",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Plans by cost risk",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cloudpilot-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (cost_risk) (cloudpilot_plans_total)",
+          "legendFormat": "{{environment}} {{route}} {{status}} {{cost_risk}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ]
+}

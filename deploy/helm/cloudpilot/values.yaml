@@ -1,4 +1,8 @@
 replicaCount: 1
+persistence:
+  size: 1Gi
+  # Empty uses the cluster default StorageClass (kind needs a local provisioner).
+  storageClass: ""
 
 image:
   repository: cloudpilot
