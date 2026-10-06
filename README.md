@@ -49,6 +49,12 @@ Python · FastAPI · Pydantic · Docker · Pytest · Terraform · AWS · Kuberne
 docker compose up --build
 ```
 
+Open the dashboard at:
+
+```text
+http://localhost:8000/dashboard
+```
+
 Open the API docs at:
 
 ```text
@@ -77,7 +83,13 @@ helm upgrade --install cloudpilot deploy/helm/cloudpilot
 kubectl port-forward svc/cloudpilot 8080:8000
 ```
 
-Then open:
+Then open the dashboard:
+
+```text
+http://localhost:8080/dashboard
+```
+
+Or open the API docs:
 
 ```text
 http://localhost:8080/docs
