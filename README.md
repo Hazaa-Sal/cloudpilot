@@ -31,6 +31,11 @@ CloudPilot API (FastAPI)
 - FastAPI control-plane API
 - Pydantic request validation
 - Environment-aware planning
+- Policy engine with allow/deny decisions
+- Cost-risk warnings and zero-cost guardrails
+- In-memory deployment plan history
+- Live local/Kubernetes runtime detection
+- Interactive web dashboard
 - Dockerized development
 - Automated API tests
 - Terraform modules for AWS networking and compute planning
@@ -54,6 +59,8 @@ Open the dashboard at:
 ```text
 http://localhost:8000/dashboard
 ```
+
+The dashboard now shows policy decisions, cost risk, deployment history, and live runtime/Kubernetes metadata.
 
 Open the API docs at:
 
@@ -141,7 +148,7 @@ terraform -chdir=infra/terraform/environments/dev plan
 
 ## Roadmap
 
-- Policy engine
+- Persistent deployment history
 - Kubernetes deployment API
 - Prometheus and Grafana
 - Security scanning
