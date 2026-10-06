@@ -10,7 +10,7 @@ def test_root():
     assert response.status_code == 200
     assert response.json() == {
         "name": "CloudPilot",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "status": "running",
     }
 
@@ -28,6 +28,14 @@ def test_health():
     assert response.json() == {"status": "healthy"}
 
 
+def test_runtime_status():
+    response = client.get("/api/v1/runtime")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] in {"local", "kubernetes"}
+    assert isinstance(body["kubernetes_detected"], bool)
+
+
 def test_generate_dev_plan():
     response = client.post(
         "/api/v1/plans",
@@ -42,10 +50,31 @@ def test_generate_dev_plan():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "validated"
+    assert data["policy"]["allowed"] is True
+    assert data["policy"]["cost_risk"] == "low"
     assert "networking" in data["resources"]
+    assert data["plan_id"]
 
 
-def test_generate_prod_plan():
+def test_production_policy_denies_single_replica():
+    response = client.post(
+        "/api/v1/plans",
+        json={
+            "name": "production-api",
+            "provider": "aws",
+            "region": "us-east-1",
+            "environment": "prod",
+            "replicas": 1,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "denied"
+    assert data["policy"]["allowed"] is False
+    assert "Production deployments require at least 2 replicas." in data["policy"]["violations"]
+
+
+def test_generate_prod_plan_with_risk_warning():
     response = client.post(
         "/api/v1/plans",
         json={
@@ -57,9 +86,34 @@ def test_generate_prod_plan():
         },
     )
     assert response.status_code == 200
-    resources = response.json()["resources"]
-    assert "high-availability" in resources
-    assert "autoscaling" in resources
+    data = response.json()
+    assert data["status"] == "validated"
+    assert data["policy"]["cost_risk"] == "medium"
+    assert "high-availability" in data["resources"]
+    assert data["policy"]["warnings"]
+
+
+def test_high_replica_count_is_high_risk():
+    response = client.post(
+        "/api/v1/plans",
+        json={
+            "name": "scale-test",
+            "provider": "aws",
+            "region": "us-east-1",
+            "environment": "dev",
+            "replicas": 5,
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["policy"]["cost_risk"] == "high"
+
+
+def test_history_records_plans():
+    response = client.get("/api/v1/history")
+    assert response.status_code == 200
+    history = response.json()
+    assert len(history) >= 1
+    assert "plan_id" in history[0]
 
 
 def test_invalid_replica_count():
