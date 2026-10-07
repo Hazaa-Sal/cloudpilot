@@ -1,0 +1,58 @@
+name: Security scans
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bandit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install bandit==1.9.4
+      - run: bandit -r apps/api/app -f json -o bandit.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit.json
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install checkov==3.2.471
+      - run: checkov -d infra/terraform --framework terraform --output cli --output junitxml --output-file-path console,checkov.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checkov-report
+          path: checkov.xml
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t cloudpilot:scan .
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: cloudpilot:scan
+          version: v0.69.3
+          scanners: vuln
+          format: json
+          output: trivy.json
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-report
+          path: trivy.json

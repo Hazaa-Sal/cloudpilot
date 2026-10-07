@@ -10,7 +10,7 @@ def test_root():
     assert response.status_code == 200
     assert response.json() == {
         "name": "CloudPilot",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "status": "running",
     }
 
@@ -109,6 +109,7 @@ def test_high_replica_count_is_high_risk():
 
 
 def test_history_records_plans():
+    client.post("/api/v1/plans", json={"name": "history-test"})
     response = client.get("/api/v1/history")
     assert response.status_code == 200
     history = response.json()

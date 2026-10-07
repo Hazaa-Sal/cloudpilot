@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -42,3 +45,26 @@ jobs:
 
       - name: Helm lint
         run: helm lint deploy/helm/cloudpilot
+
+      - name: Render Kubernetes manifests
+        run: helm template cloudpilot deploy/helm/cloudpilot > /tmp/cloudpilot.yaml
+
+      - name: Validate Compose
+        run: docker compose --profile monitoring config --quiet
+
+      - name: Validate Prometheus config
+        run: docker run --rm --entrypoint promtool -v "$PWD/monitoring:/etc/prometheus:ro" prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
+
+      - name: Start local monitoring stack
+        run: docker compose --profile monitoring up -d --build --wait
+
+      - name: Verify live metrics and provisioned dashboard
+        run: python scripts/smoke.py
+
+      - name: Collect container logs
+        if: failure()
+        run: docker compose --profile monitoring logs
+
+      - name: Stop CI containers
+        if: always()
+        run: docker compose --profile monitoring down

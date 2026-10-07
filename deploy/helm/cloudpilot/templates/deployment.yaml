@@ -1,8 +1,13 @@
+{{- if ne (int .Values.replicaCount) 1 }}
+{{- fail "SQLite history requires replicaCount=1" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}
 spec:
+  strategy:
+    type: Recreate
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
@@ -12,13 +17,39 @@ spec:
       labels:
         app: {{ .Release.Name }}
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-data
+        - name: tmp
+          emptyDir: {}
       containers:
         - name: cloudpilot
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /cloudpilot/data
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 8000
           env:
+            - name: CLOUDPILOT_DB_PATH
+              value: /cloudpilot/data/cloudpilot.db
             - name: CLOUDPILOT_NAMESPACE
               valueFrom:
                 fieldRef:
